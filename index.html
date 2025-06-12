@@ -1,138 +1,206 @@
-<!DOCTYPE html>
+ <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="kk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Құттықтау парағы</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-      color: #fff;
-      text-align: center;
-      overflow: hidden;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ИИН Видео Портал</title>
+    <style>
+        /* Стили для видеофона и центрирования контента */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
 
-    /* Фондағы iframe */
-    .background-iframe {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: -1;
-    }
+        /* Видеофон на всю страницу */
+        #background-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
 
-    .background-iframe iframe {
-      border: none;
-      width: 100vw;
-      height: 100vh;
-    }
+        /* Контейнер для формы и видео */
+        .container {
+            text-align: center;
+            color: white;
+            z-index: 1;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+        }
 
-    /* Контент стилі */
-    .box {
-      background: rgba(255, 255, 255, 0.9);
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(255, 105, 180, 0.7);
-      color: #000;
-      margin-top: 100px;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
-    }
+        /* Стили для ввода ИИН и кнопок */
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px 0;
+            width: 200px;
+        }
 
-    input {
-      padding: 10px;
-      font-size: 18px;
-      width: 250px;
-    }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
 
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      font-size: 18px;
-      background-color: hotpink;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-    }
+        button:hover {
+            background-color: #45a049;
+        }
 
-    video {
-      max-width: 90%;
-      border-radius: 15px;
-      margin-top: 20px;
-    }
+        /* Стили для видео результата */
+        #result-video {
+            display: none;
+            max-width: 80%;
+            margin-top: 20px;
+        }
 
-    .message {
-      background: rgba(255, 105, 180, 0.7);
-      padding: 20px;
-      border-radius: 15px;
-      font-size: 20px;
-      max-width: 600px;
-      margin: 20px auto;
-      color: #000;
-    }
-  </style>
+        /* Стили для сообщения об ошибке */
+        #error-message {
+            color: red;
+            font-size: 18px;
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-
-  <!-- 📌 Фондағы iframe -->
-  <div class="background-iframe">
-    <iframe src="https://assets.pinterest.com/ext/embed.html?id=13159023905325435"
-      frameborder="0" scrolling="no"></iframe>
-  </div>
-
-  <!-- 🧾 ИИН енгізу -->
-  <div class="box" id="iinForm">
-    <h2>Балаңыздың ИИН нөмірін енгізіңіз:</h2>
-    <input type="text" id="iin" maxlength="12" placeholder="12 таңбалы ИИН" />
-    <br />
-    <button onclick="checkIIN()">Жіберу</button>
-  </div>
-
-  <!-- 🎉 Құттықтау бөлігі -->
-  <div id="congrats" style="display: none;">
-    <video id="videoPlayer" controls autoplay>
-      <source id="videoSource" src="" type="video/mp4" />
-      Браузер видеоны қолдамайды.
+    <!-- Видеофон главного меню -->
+    <video id="background-video" autoplay loop muted>
+        <source src="https://example.com/background-video.mp4" type="video/mp4">
+        <!-- Замените src на URL вашего видеофона -->
+        Ваш браузер не поддерживает видео.
     </video>
-    <div class="message" id="congratsText">
-      Құрметті ата-ана!<br />
-      Біз сізді шын жүректен құттықтаймыз! 💖🎉
+
+    <!-- Главный контейнер с формой и результатами -->
+    <div class="container">
+        <!-- Заголовок на казахском -->
+        <h1>Балаңыздың ЖСН енгізіңіз</h1>
+        <!-- Поле ввода ИИН -->
+        <input type="text" id="iin-input" placeholder="ЖСН енгізіңіз" maxlength="12">
+        <!-- Кнопка отправки -->
+        <button onclick="checkIIN()">Жіберу</button>
+        <!-- Кнопка "Назад", скрыта изначально -->
+        <button id="back-button" onclick="goBack()" style="display: none;">Артқа</button>
+        <!-- Контейнер для видео результата -->
+        <video id="result-video" controls></video>
+        <!-- Сообщение об ошибке -->
+        <div id="error-message">ЖСН дұрыс емес</div>
     </div>
-  </div>
 
-  <!-- ⚙ JavaScript -->
-  <script>
-    // ИИН мен видео сілтемелер картасы
-    const videoMap = {
-      "080814554329": "videos/azat.mp4",
-      "020202234567": "videos/video2.mp4",
-      "030303345678": "videos/video3.mp4",
-      "040404456789": "videos/video4.mp4"
-      // тағы да жалғастыра беруге болады
-    };
+    <script>
+        // Объект с соответствием ИИН и URL видео
+        const iinVideos = {
+            "080427551370": "https://youtu.be/hTSaweR8qMI?si=Hsk0UatFGXI479Xt",
+            "123456789013": "https://example.com/video2.mp4",
+            "123456789014": "https://example.com/video3.mp4",
+            "123456789015": "https://example.com/video4.mp4",
+            "123456789016": "https://example.com/video5.mp4",
+            "123456789017": "https://example.com/video6.mp4",
+            "123456789018": "https://example.com/video7.mp4",
+            "123456789019": "https://example.com/video8.mp4",
+            "123456789020": "https://example.com/video9.mp4",
+            "123456789021": "https://example.com/video10.mp4",
+            "123456789022": "https://example.com/video11.mp4",
+            "123456789023": "https://example.com/video12.mp4",
+            "123456789024": "https://example.com/video13.mp4",
+            "123456789025": "https://example.com/video14.mp4"
+            // Замените URL на реальные ссылки на видео
+        };
 
-    function checkIIN() {
-      const iin = document.getElementById('iin').value.trim();
-      const videoPath = videoMap[iin];
+        // Функция проверки ИИН
+        function checkIIN() {
+            const iin = document.getElementById("iin-input").value;
+            const resultVideo = document.getElementById("result-video");
+            const errorMessage = document.getElementById("error-message");
+            const backButton = document.getElementById("back-button");
 
-      if (videoPath) {
-        document.getElementById('iinForm').style.display = 'none';
-        document.getElementById('congrats').style.display = 'block';
+            // Скрываем элементы перед проверкой
+            resultVideo.style.display = "none";
+            errorMessage.style.display = "none";
 
-        const video = document.getElementById('videoPlayer');
-        const source = document.getElementById('videoSource');
+            // Проверка, есть ли ИИН в списке
+            if (iinVideos[iin]) {
+                // Показываем видео и кнопку "Назад"
+                resultVideo.src = iinVideos[iin];
+                resultVideo.style.display = "block";
+                backButton.style.display = "inline-block";
+                document.getElementById("iin-input").style.display = "none";
+                document.querySelector("button[onclick='checkIIN()']").style.display = "none";
+            } else {
+                // Показываем сообщение об ошибке
+                errorMessage.style.display = "block";
+            }
+        }
 
-        source.src = videoPath;
-        video.load();
-      } else {
-        alert("ИИН дұрыс емес. Қайта тексеріңіз.");
-      }
-    }
-  </script>
+        // Функция возврата к форме
+        function goBack() {
+            const resultVideo = document.getElementById("result-video");
+            const errorMessage = document.getElementById("error-message");
+            const backButton = document.getElementById("back-button");
+            const iinInput = document.getElementById("iin-input");
 
+            // Скрываем видео и сообщение об ошибке, показываем форму
+            resultVideo.style.display = "none";
+            resultVideo.src = "";
+            errorMessage.style.display = "none";
+            backButton.style.display = "none";
+            iinInput.style.display = "block";
+            iinInput.value = "";
+            document.querySelector("button[onclick='checkIIN()']").style.display = "inline-block";
+        }
+    </script>
 </body>
 </html>
