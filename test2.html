@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Құттықтау парағы</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      color: #fff;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    /* Фондағы iframe */
+    .background-iframe {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+    }
+
+    .background-iframe iframe {
+      border: none;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Контент стилі */
+    .box {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(255, 105, 180, 0.7);
+      color: #000;
+      margin-top: 100px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 18px;
+      width: 250px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: hotpink;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    video {
+      max-width: 90%;
+      border-radius: 15px;
+      margin-top: 20px;
+    }
+
+    .message {
+      background: rgba(255, 105, 180, 0.7);
+      padding: 20px;
+      border-radius: 15px;
+      font-size: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 📌 Фондағы iframe -->
+  <div class="background-iframe">
+    <iframe src="https://assets.pinterest.com/ext/embed.html?id=13159023905325435"
+      frameborder="0" scrolling="no"></iframe>
+  </div>
+
+  <!-- 🧾 ИИН енгізу -->
+  <div class="box" id="iinForm">
+    <h2>Балаңыздың ИИН нөмірін енгізіңіз:</h2>
+    <input type="text" id="iin" maxlength="12" placeholder="12 таңбалы ИИН" />
+    <br />
+    <button onclick="checkIIN()">Жіберу</button>
+  </div>
+
+  <!-- 🎉 Құттықтау бөлігі -->
+  <div id="congrats" style="display: none;">
+    <video id="videoPlayer" controls autoplay>
+      <source id="videoSource" src="" type="video/mp4" />
+      Браузер видеоны қолдамайды.
+    </video>
+    <div class="message" id="congratsText">
+      Құрметті ата-ана!<br />
+      Біз сізді шын жүректен құттықтаймыз! 💖🎉
+    </div>
+  </div>
+
+  <!-- ⚙ JavaScript -->
+  <script>
+    // ИИН мен видео сілтемелер картасы
+    const videoMap = {
+      "080814554329": "videos/azat.mp4",
+      "020202234567": "videos/video2.mp4",
+      "030303345678": "videos/video3.mp4",
+      "040404456789": "videos/video4.mp4"
+      // тағы да жалғастыра беруге болады
+    };
+
+    function checkIIN() {
+      const iin = document.getElementById('iin').value.trim();
+      const videoPath = videoMap[iin];
+
+      if (videoPath) {
+        document.getElementById('iinForm').style.display = 'none';
+        document.getElementById('congrats').style.display = 'block';
+
+        const video = document.getElementById('videoPlayer');
+        const source = document.getElementById('videoSource');
+
+        source.src = videoPath;
+        video.load();
+      } else {
+        alert("ИИН дұрыс емес. Қайта тексеріңіз.");
+      }
+    }
+  </script>
+
+</body>
+</html>
